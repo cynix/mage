@@ -19,6 +19,7 @@ func main() {
 
 func run() int {
 	version := flag.Bool("version", false, "show version")
+	test := flag.Bool("test", false, "test decryption")
 	flag.Parse()
 
 	if *version {
@@ -50,7 +51,7 @@ func run() int {
 	}
 
 	for {
-		files = doAll(files, decrypt)
+		files = doAll(files, decrypt, *test)
 
 		if len(files) == 0 {
 			return 0
@@ -60,7 +61,7 @@ func run() int {
 	}
 }
 
-func doAll(files []string, decrypt bool) []string {
+func doAll(files []string, decrypt, test bool) []string {
 	var failed []string
 
 	pass, err := readPassphrase(decrypt)
@@ -115,16 +116,20 @@ func doAll(files []string, decrypt bool) []string {
 			of = f + ".age"
 		}
 
-		o, err := os.OpenFile(of, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, s.Mode())
-		if err != nil {
-			fmt.Printf("Failed to open: %v\n", err)
-			failed = append(failed, f)
-			continue
+		var o *os.File
+		if !test {
+			o, err := os.OpenFile(of, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, s.Mode())
+			if err != nil {
+				fmt.Printf("Failed to open: %v\n", err)
+				failed = append(failed, f)
+				continue
+			}
+			defer o.Close()
 		}
-		defer o.Close()
 
 		if decrypt {
 			var in io.Reader
+			var out io.Writer
 
 			rr := bufio.NewReader(i)
 			if h, _ := rr.Peek(len(armor.Header)); string(h) == armor.Header {
@@ -140,7 +145,13 @@ func doAll(files []string, decrypt bool) []string {
 				continue
 			}
 
-			if _, err = io.Copy(o, r); err != nil {
+			if test {
+				out = io.Discard
+			} else {
+				out = o
+			}
+
+			if _, err = io.Copy(out, r); err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to decrypt %s: %v\n", f, err)
 				failed = append(failed, f)
 				continue
@@ -176,8 +187,10 @@ func doAll(files []string, decrypt bool) []string {
 			}
 		}
 
-		if err := os.Remove(f); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to delete %s: %v\n", f, err)
+		if !test {
+			if err := os.Remove(f); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to delete %s: %v\n", f, err)
+			}
 		}
 	}
 
