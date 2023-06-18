@@ -87,7 +87,13 @@ func doAll(files []string, decrypt bool) []string {
 	}
 
 	for _, f := range files {
-		i, err := os.Open(f)
+		var i *os.File
+
+		if decrypt {
+			i, err = os.Open(f)
+		} else {
+			i, err = os.OpenFile(f, os.O_RDWR, 0)
+		}
 		if err != nil {
 			fmt.Printf("Failed to open: %v\n", err)
 			failed = append(failed, f)
@@ -162,6 +168,12 @@ func doAll(files []string, decrypt bool) []string {
 			}
 
 			fmt.Fprintf(os.Stderr, "Encrypted %s\n", f)
+
+			if _, err = i.Seek(0, 0); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to erase %s: %v\n", f, err)
+			} else if _, err = io.CopyN(i, ZeroReader, s.Size()); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to erase %s: %v\n", f, err)
+			}
 		}
 
 		if err := os.Remove(f); err != nil {
