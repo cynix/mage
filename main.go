@@ -118,7 +118,7 @@ func doAll(files []string, decrypt, test bool) []string {
 
 		var o *os.File
 		if !test {
-			o, err := os.OpenFile(of, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, s.Mode())
+			o, err = os.OpenFile(of, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, s.Mode())
 			if err != nil {
 				fmt.Printf("Failed to open: %v\n", err)
 				failed = append(failed, f)
