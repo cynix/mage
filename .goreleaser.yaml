@@ -1,0 +1,37 @@
+project_name: mage
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    goos:
+      - darwin
+      - freebsd
+    goarch:
+      - amd64
+      - arm64
+
+universal_binaries:
+  - replace: true
+
+checksum:
+  name_template: 'checksums.txt'
+
+source:
+  enabled: true
+  name_template: '{{ .ProjectName }}-v{{ .Version }}'
+
+archives:
+  - name_template: '{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}'
+    builds_info:
+      owner: root
+      group: root
+      mtime: "{{ .CommitTimestamp }}"
+    wrap_in_directory: false
+
+release:
+  name_template: 'v{{ .Version }}'
