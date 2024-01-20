@@ -21,10 +21,6 @@ universal_binaries:
 checksum:
   name_template: 'checksums.txt'
 
-source:
-  enabled: true
-  name_template: '{{ .ProjectName }}-v{{ .Version }}'
-
 archives:
   - name_template: '{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}'
     builds_info:
