@@ -20,6 +20,7 @@ func main() {
 func run() int {
 	version := flag.Bool("version", false, "show version")
 	test := flag.Bool("test", false, "test decryption")
+	keep := flag.Bool("keep", false, "keep original files")
 	flag.Parse()
 
 	if *version {
@@ -50,8 +51,13 @@ func run() int {
 		}
 	}
 
+	if *test && !decrypt {
+		fmt.Fprintln(os.Stderr, "Cannot test encryption")
+		return 1
+	}
+
 	for {
-		files = doAll(files, decrypt, *test)
+		files = doAll(files, decrypt, *test, *keep)
 
 		if len(files) == 0 {
 			return 0
@@ -61,7 +67,7 @@ func run() int {
 	}
 }
 
-func doAll(files []string, decrypt, test bool) []string {
+func doAll(files []string, decrypt, test, keep bool) []string {
 	var failed []string
 
 	pass, err := readPassphrase(decrypt)
@@ -180,14 +186,16 @@ func doAll(files []string, decrypt, test bool) []string {
 
 			fmt.Fprintf(os.Stderr, "Encrypted %s\n", f)
 
-			if _, err = i.Seek(0, 0); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to erase %s: %v\n", f, err)
-			} else if _, err = io.CopyN(i, ZeroReader, s.Size()); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to erase %s: %v\n", f, err)
+			if !keep {
+				if _, err = i.Seek(0, 0); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to erase %s: %v\n", f, err)
+				} else if _, err = io.CopyN(i, ZeroReader, s.Size()); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to erase %s: %v\n", f, err)
+				}
 			}
 		}
 
-		if !test {
+		if !test && !keep {
 			if err := os.Remove(f); err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to delete %s: %v\n", f, err)
 			}
